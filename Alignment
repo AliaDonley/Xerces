@@ -59,7 +59,7 @@ sbatch ##filename.sh
 
 
 
-Alignment 
+Alignment of Xerces to Alexis
 
 #!/bin/sh
 #SBATCH --time=240:00:00
@@ -114,7 +114,7 @@ $pm->wait_all_children;
 
 
 
-####Alignment for one sample
+####Alignment for one sample (lygdamus to alexis)
 
 
 #!/bin/sh
