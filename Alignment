@@ -1,3 +1,64 @@
+##Download samples from ncbi  and ena
+
+mkdir -p Glaucopsyche_lygdamus Glaucopsyche_lygdamus_xerces
+
+wget -O ena_links.tsv "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=PRJEB47122&result=read_run&fields=fastq_ftp&format=tsv"
+tail -n +2 ena_links.tsv | cut -f1 | tr ';' '\n' | grep '^ftp' > ena_fastq_urls.txt
+wget -nc -i ena_fastq_urls.txt
+
+
+##to geet both paired end reads
+grep -o 'ftp://[^;]*\.fastq\.gz' ena_links.tsv | sort | uniq > ena_fastq_urls.txt
+
+##to double check file is clean
+head ena_fastq_urls.txt
+wc -l ena_fastq_urls.txt
+##it should show something like and how many FASTQ files are ready to download
+ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR136/003/ERR13648403/ERR13648403_1.fastq.gz
+
+tail -n +2 your_file.tsv | cut -f2 | tr ';' '\n' > ena_fastq_urls.txt
+##to preview the result:
+
+head ena_fastq_urls.txt
+wc -l ena_fastq_urls.txt
+Should see lines like: 
+ftp.sra.ebi.ac.uk/vol1/fastq/ERR136/078/ERR13648378/ERR13648378_1.fastq.gz
+ftp.sra.ebi.ac.uk/vol1/fastq/ERR136/078/ERR13648378/ERR13648378_2.fastq.gz
+
+##for full URL format:
+sed -i 's|^|ftp://|' ena_fastq_urls.txt
+
+##To download:
+wget -nc -i ena_fastq_urls.txt
+
+##To download in a batch script if file is big:
+
+
+#!/bin/sh
+#SBATCH --time=72:00:00
+#SBATCH --nodes=20
+#SBATCH --ntasks=1
+#SBATCH --account=gompert
+#SBATCH --partition=kingspeak
+#SBATCH --job-name=genomedownload
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=alia.donley@usu.edu
+
+module load wget
+
+wget -nc -i ena_fastq_urls.txt
+
+sbatch ##filename.sh
+
+
+
+
+
+
+
+
+
+
 Alignment 
 
 #!/bin/sh
@@ -95,3 +156,11 @@ samtools index "$OutputLygdamus"
 rm temp.sam temp.bam
 
 echo "DONE."
+
+
+
+
+##Lygdamus to Alexis
+
+
+
