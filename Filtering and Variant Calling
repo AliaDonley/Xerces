@@ -1,0 +1,36 @@
+Lygdamus to Alexis
+
+#!/bin/sh
+#SBATCH --time=48:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --account=gompert
+#SBATCH --partition=ingspeak
+#SBATCH --job-name=singlealignment
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=alia.donley@usu.edu
+
+module load samtools
+
+cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome
+
+samtools mpileup -Ou -f Alexis_genome.fna Canada.RVCOL-L110B1_sorted.bam | \
+bcftools call -mv -Oz -o lygdamus_variants.vcf.gz
+
+      ##ou- uncompressed BCF for poping
+      ##-f: path to Alexis
+      ## mv- multiallelic calling, variants only
+      ## Oz- compressed VCF output
+
+bcftools index lygdamus_variants.vcf.gz
+      ##index VCF file
+
+bcftools consensus -f Alexis_genome.fna lygdamus_variants.vcf.gz > lygdamus_corrected.fna
+      ##Apply Variants to generate FASTA
+
+bwa index lygdamus_corrected.fna
+      ## index corrected genome for alignment 
+      ## lygdamus corrected will now be reference for aligning xerces 
+      ## Canada....sorted_bam- lygdamus aligned to alexis
+      ## lygdamus_variants.vcf.gz- SNPS and indels from lyg
+
