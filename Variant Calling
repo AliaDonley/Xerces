@@ -14,6 +14,8 @@ module load samtools
 
 cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome
 
+
+###samtools faidx to index the reference genome
 samtools mpileup -Ou -f Alexis_genome.fna Canada.RVCOL-L110B1_sorted.bam | \
 bcftools call -mv -Oz -o lygdamus_variants.vcf.gz
 
@@ -34,3 +36,10 @@ bwa index lygdamus_corrected.fna
       ## Canada....sorted_bam- lygdamus aligned to alexis
       ## lygdamus_variants.vcf.gz- SNPS and indels from lyg
 
+
+
+
+
+
+bcftools with mpile up and call 
+index for the reference genome
