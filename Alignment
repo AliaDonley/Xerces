@@ -1,0 +1,50 @@
+Alignment 
+
+#!/bin/sh
+#SBATCH --time=240:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=20
+#SBATCH --account=gompert-kp
+#SBATCH --partition=gompert-kp
+#SBATCH --job-name=batchalignment
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=alia.donley@usu.edu
+
+module load samtools
+module load bwa
+##Version: 1.16 (using htslib 1.16)
+
+cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome
+
+perl BwaMemFork.pl /uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/Lygdamus_Xer_genomes/Glaucopsyche_lygdamus_xerces/*1.fastq
+
+
+
+BWAMEMFORK
+
+#!/usr/bin/perl
+#
+# alignment with bwa mem 
+#
+
+
+use Parallel::ForkManager;
+my $max = 30;
+my $pm = Parallel::ForkManager->new($max);
+my $genome = "/uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/Lygdamus_Xer_genomes/Alexis_ref_genome/GCA_905404095.1_ilGla$
+
+FILES:
+foreach $fq1 (@ARGV){
+        $pm->start and next FILES; ## fork
+        $fq2 = $fq1;
+        $fq2 =~ s/_1\.fastq/_2.fastq/ or die "failed substitution for $fq1\n";
+        $fq1 =~ m/(E[A-Z0-9]+)_1\.fastq$/ or die "failed to match id $fq1\n";
+        $ind = $1;
+        system "bwa mem -t 1 -k 19 -r 1.5 -R \'\@RG\\tID:Xer-"."$ind\\tLB:Xer-"."$ind\\tSM:Xer-"."$ind"."\' $genome $fq1 $fq2 | s$
+
+        $pm->finish;
+}
+
+$pm->wait_all_children;
+
+
