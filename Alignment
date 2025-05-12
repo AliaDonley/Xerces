@@ -4,8 +4,8 @@ Alignment
 #SBATCH --time=240:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=20
-#SBATCH --account=gompert-kp
-#SBATCH --partition=gompert-kp
+#SBATCH --account=gompert
+#SBATCH --partition=notchpeak
 #SBATCH --job-name=batchalignment
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=alia.donley@usu.edu
@@ -48,3 +48,50 @@ foreach $fq1 (@ARGV){
 $pm->wait_all_children;
 
 
+
+
+
+
+
+####Alignment for one sample
+
+
+#!/bin/sh
+#SBATCH --time=48:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --account=gompert
+#SBATCH --partition=ingspeak
+#SBATCH --job-name=singlealignment
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=alia.donley@usu.edu
+
+module load samtools
+module load bwa
+
+mkdir -p Outputlygdamus
+
+cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome
+
+Alexis="/uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/Lygdamus_Xer_genomes/Alexis_ref_genome/GCA_905404095.1_ilGlaAlex1.1_genomic.fna"
+L1="Canada.RVCOL-L110B1_1.ENA_Sorted.fastq.gz"
+L2="Canada.RVCOL-L110B1_2.ENA_Sorted.fastq.gz"
+##OutputLygdamus="/uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/Lygdamus_Xer_genomes/Glaucopsyche_lygdamus/OutputLygdamus"
+OutputLygdamus="Canada.RVCOL-L110B1_sorted.bam"
+
+
+#Pipeline for single thread
+
+echo "Aligning $L1 and $L2 to $Alexis..."
+bwa mem "$Alexis" "$L1" "$L2" > temp.sam
+
+echo "Converting SAM to BAM..."
+samtools sort temp.bam -o "$OutputLygdamus"
+
+echo "Indexing BAM..."
+samtools index "$OutputLygdamus"
+
+#Cleanup extras
+rm temp.sam temp.bam
+
+echo "DONE."
