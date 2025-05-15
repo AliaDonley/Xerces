@@ -3,5 +3,13 @@ where lyg differs from alexis
 Filtering vcf file to align lygdamus to alexis and get rid of all snps that dont match with 90% confidence 
 only filtering for homozygotes, leaving hererozygotes where alleles with both detected in lydamus were detected
 
-load bcftools
+module load bcftools
 bcftools consensus -f GCA_905404095.1_ilGlaAlex1.1_genomic.fna - 'QUAL>10 & COUNT(GT="hom")=1' lygdamus_variants.vcf.gz > filteredalignedLygdamus.fna
+##why didn't this work?
+
+##had to check this first to see if this ran and it did
+bcftools view -i 'QUAL>10 & COUNT(GT="hom")=1'lygdamus_variants.vcf.gz
+
+bcftools view -i 'QUAL>10 & COUNT(GT="hom")=1' lygdamus_variants.vcf.gz -Oz -o filtered.vcf.gz
+bcftools index filtered.vcf.gz
+bcftools consensus -f GCA_905404095.1_ilGlaAlex1.1_genomic.fna filtered.vcf.gz > filteredalignedLygdamus.fna
