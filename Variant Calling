@@ -3,43 +3,44 @@ Lygdamus to Alexis
 #!/bin/sh
 #SBATCH --time=48:00:00
 #SBATCH --nodes=1
-#SBATCH --ntasks=1
+#SBATCH --ntasks=12
 #SBATCH --account=gompert
-#SBATCH --partition=ingspeak
-#SBATCH --job-name=singlealignment
+#SBATCH --partition=kingspeak
+#SBATCH --job-name=LygVC
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=alia.donley@usu.edu
 
-module load samtools
+module load bwa
+module load bcftools
 
 cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome
 
 
-###samtools faidx to index the reference genome
-samtools mpileup -Ou -f Alexis_genome.fna Canada.RVCOL-L110B1_sorted.bam | \
-bcftools call -mv -Oz -o lygdamus_variants.vcf.gz
+echo "Calling variants with mpileup..."
+##Ov for an uncompress vcf file?
+##or ou for uncompressed bcf
 
-      ##ou- uncompressed BCF for poping
-      ##-f: path to Alexis
-      ## mv- multiallelic calling, variants only
-      ## Oz- compressed VCF output
+##f for faidix to index reference genome
+
+bcftools mpileup -f GCA_905404095.1_ilGlaAlex1.1_genomic.fna Canada.RVCOL-L110B1_sorted.bam | \
+
+bcftools call -mv -Oz -o lygdamus_variants.vcf.gz
+##Oz is giving compressed VCF
 
 bcftools index lygdamus_variants.vcf.gz
       ##index VCF file
 
-bcftools consensus -f Alexis_genome.fna lygdamus_variants.vcf.gz > lygdamus_corrected.fna
+bcftools consensus -f GCA_905404095.1_ilGlaAlex1.1_genomic.fna lygdamus_variants.vcf.gz > lygdamus_corrected.fna
       ##Apply Variants to generate FASTA
 
 bwa index lygdamus_corrected.fna
-      ## index corrected genome for alignment 
-      ## lygdamus corrected will now be reference for aligning xerces 
-      ## Canada....sorted_bam- lygdamus aligned to alexis
-      ## lygdamus_variants.vcf.gz- SNPS and indels from lyg
+      ## index corrected genome for alignment
+
+
+Filtering vcf file to align lygdamus to alexis and get rid of all snps that dont match with 90% confidence 
+
+load bcftools
+bcftools consensus -f GCA_905404095.1_ilGlaAlex1.1_genomic.fna - 'QUAL>10 & COUNT(GT="hom")=1' lygdamus_variants.vcf.gz > filteredalignedLygdamus.fna
 
 
 
-
-
-
-bcftools with mpile up and call 
-index for the reference genome
