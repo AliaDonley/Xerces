@@ -59,6 +59,7 @@ sbatch ##filename.sh
 
 
 
+
 Alignment of Xerces to Alexis
 
 #!/bin/sh
@@ -73,7 +74,6 @@ Alignment of Xerces to Alexis
 
 module load samtools
 module load bwa
-##Version: 1.16 (using htslib 1.16)
 
 cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome
 
@@ -92,7 +92,7 @@ BWAMEMFORK
 use Parallel::ForkManager;
 my $max = 30;
 my $pm = Parallel::ForkManager->new($max);
-my $genome = "/uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/Lygdamus_Xer_genomes/Alexis_ref_genome/GCA_905404095.1_ilGla$
+my $genome = "/uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/Lygdamus_Xer_genomes/Alexis_ref_genome/GCA_905404095.1_ilGlaAlex1.1_genomic.fna";
 
 FILES:
 foreach $fq1 (@ARGV){
@@ -101,7 +101,7 @@ foreach $fq1 (@ARGV){
         $fq2 =~ s/_1\.fastq/_2.fastq/ or die "failed substitution for $fq1\n";
         $fq1 =~ m/(E[A-Z0-9]+)_1\.fastq$/ or die "failed to match id $fq1\n";
         $ind = $1;
-        system "bwa mem -t 1 -k 19 -r 1.5 -R \'\@RG\\tID:Xer-"."$ind\\tLB:Xer-"."$ind\\tSM:Xer-"."$ind"."\' $genome $fq1 $fq2 | s$
+        system "bwa mem -t 1 -k 19 -r 1.5 -R \'\@RG\\tID:Xer-"."$ind\\tLB:Xer-"."$ind\\tSM:Xer-"."$ind"."\' $genome $fq1 $fq2| samtools sort -@ 2 -O BAM -o $ind".".bam - && samtools index-@ 2 $ind".".bam\n";
 
         $pm->finish;
 }
@@ -160,7 +160,72 @@ echo "DONE."
 
 
 
-##Lygdamus to Alexis
+##Corrected lygdamus and internet Xerces 
+
+perl script will be run by the bwa shell script (the one you will sbatch). Both of these should be in the directory you want your outputs to go into and 
+that you are pulling files from unless otherwise specified. 
+
+PERL:
+
+#!/usr/bin/perl
+#
+# alignment with bwa mem 
+#
+
+
+use Parallel::ForkManager;
+my $max = 30;
+my $pm = Parallel::ForkManager->new($max);
+my $genome = "/uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/filteredalignedLygdamus.fna";
+
+FILES:
+foreach $fq1 (@ARGV){
+        $pm->start and next FILES; ## fork
+        $fq2 = $fq1;
+        $fq2 =~ s/_1\.fastq/_2.fastq/ or die "failed substitution for $fq1\n";
+        $fq1 =~ m/(E[A-Z0-9]+)_1\.fastq$/ or die "failed to match id $fq1\n";
+        $ind = $1;
+        system "bwa mem -t 1 -k 19 -r 1.5 -R \'\@RG\\tID:Xer-"."$ind\\tLB:Xer-"."$ind\\tSM:Xer-"."$ind"."\' $genome $fq1 $fq2 | samtools sort -@ 2 -O BAM -o lygaln_$ind".".bam - && samtools index -@ 2 $ind".".bam\n";
+
+        $pm->finish;
+}
+
+$pm->wait_all_children;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#!/bin/sh
+#SBATCH --time=240:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=20
+#SBATCH --account=gompert
+#SBATCH --partition=notchpeak
+#SBATCH --job-name=batchalignment
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=alia.donley@usu.edu
+
+module load samtools
+module load bwa
+##Version: 1.16 (using htslib 1.16)
+
+cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome
+
+
+perl BwaMemFork.pl /uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/
 
 
 
