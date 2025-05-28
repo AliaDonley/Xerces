@@ -7,7 +7,7 @@ tail -n +2 ena_links.tsv | cut -f1 | tr ';' '\n' | grep '^ftp' > ena_fastq_urls.
 wget -nc -i ena_fastq_urls.txt
 
 
-##to geet both paired end reads
+##to get both paired end reads
 grep -o 'ftp://[^;]*\.fastq\.gz' ena_links.tsv | sort | uniq > ena_fastq_urls.txt
 
 ##to double check file is clean
@@ -50,14 +50,13 @@ wget -nc -i ena_fastq_urls.txt
 
 sbatch ##filename.sh
 
+##Index the reference genome using bwa index:
+
+bwa index GCA_905404095.1_ilGlaAlex1.1_genomic.fna
 
 
 
-
-
-
-
-
+## Ready for batch alignment 
 
 
 Alignment of Xerces to Alexis
@@ -78,7 +77,6 @@ module load bwa
 cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome
 
 perl BwaMemFork.pl /uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/Lygdamus_Xer_genomes/Glaucopsyche_lygdamus_xerces/*1.fastq
-
 
 
 BWAMEMFORK
@@ -227,7 +225,7 @@ cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/Lygdamus_Xer_genomes/G
 
 perl BwaMemForkXer.pl *_1.fastq
 
-##Also need to unzip and align the single Lygdamus sample. End of second end is truncated. Working on getting it. 
+##Also need to unzip and align the single Lygdamus sample. End of second end is truncated.  
 ##Redownloaded file and copied to cluster
 
 ##Trying to download different fastq files from ENA website. The contemporary lyg sample has the code: RVcoll10-B005
@@ -288,4 +286,6 @@ ERR13663684:90%
 
 
 
+make symbolic link to xerces 
+make symbolic link to sequence data 
 
