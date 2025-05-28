@@ -160,6 +160,22 @@ echo "DONE."
 
 
 
+
+
+
+##Have to align lyg to corrected genome. Second end lyg was truncated. Redownloaded file and copied to cluster
+
+scp "~/Downloads/Canada.RVCOL-L110B1_2.ENA_Sorted.fastq (1).gz" u6047808@kingspeak.chpc.utah.edu:/uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/
+
+##Can also rename in local machine and then copy
+
+
+mv ~/Downloads/"Canada.RVCOL-L110B1_2.ENA_Sorted.fastq (1).gz" ~/Downloads/Canada.RVCOL-L110B1_2.ENA_Sorted.fastq.gz
+scp ~/Downloads/Canada.RVCOL-L110B1_2.ENA_Sorted.fastq.gz u6047808@kingspeak.chpc.utah.edu:/uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/
+
+
+
+
 ##Corrected lygdamus and internet Xerces 
 ##also aligning the one contemp lyg to corrected lgy
 
@@ -167,13 +183,108 @@ perl script will be run by the bwa shell script (the one you will sbatch). Both 
 that you are pulling files from unless otherwise specified. (i.e. SubBwa will run BwaMemFork.pl)
 
 PERL: BwaMemFork
+#!/usr/bin/perl
+#
+# alignment with bwa mem 
+#
 
 
+use Parallel::ForkManager;
+my $max = 30;
+my $pm = Parallel::ForkManager->new($max);
+my $genome = "/uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/filteredalignedLygdamus.fna";
 
+FILES:
+foreach $fq1 (@ARGV){
+        $pm->start and next FILES; ## fork
+        $fq2 = $fq1;
+        $fq2 =~ s/_1\.fastq/_2.fastq/ or die "failed substitution for $fq1\n";
+        $fq1 =~ m/(E[A-Z0-9]+)_1\.fastq$/ or die "failed to match id $fq1\n";
+        $ind = $1;
+        system "bwa mem -t 1 -k 19 -r 1.5 -R \'\@RG\\tID:Xer-"."$ind\\tLB:Xer-"."$ind\\tSM:Xer-"."$ind"."\' $genome $fq1 $fq2 | samtools sort -@ 2 -O BAM -o lygaln_$ind".".bam - && samtools index -@ 2 $ind".".bam\n";
 
+        $pm->finish;
+}
+
+$pm->wait_all_children;
 
 Bash script: SubBwa
+#!/bin/sh
+#SBATCH --time=72:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=20
+#SBATCH --account=gompert-kp
+#SBATCH --partition=gompert-kp
+#SBATCH --job-name=batchalignment
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=alia.donley@usu.edu
 
+module load samtools
+module load bwa
+##Version: 1.16 (using htslib 1.16)
+
+cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/Lygdamus_Xer_genomes/Glaucopsyche_lygdamus_xerces/done
+
+perl BwaMemForkXer.pl *_1.fastq
+
+##Also need to unzip and align the single Lygdamus sample. End of second end is truncated. Working on getting it. 
+##Redownloaded file and copied to cluster
+
+##Trying to download different fastq files from ENA website. The contemporary lyg sample has the code: RVcoll10-B005
+##Link to ENA samples: https://www.ebi.ac.uk/ena/browser/view/PRJEB47122
+
+scp "~/Downloads/Canada.RVCOL-L110B1_2.ENA_Sorted.fastq (1).gz" u6047808@kingspeak.chpc.utah.edu:/uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/
+
+##Can also rename in local machine and then copy
+
+
+mv ~/Downloads/"Canada.RVCOL-L110B1_2.ENA_Sorted.fastq (1).gz" ~/Downloads/Canada.RVCOL-L110B1_2.ENA_Sorted.fastq.gz
+scp ~/Downloads/Canada.RVCOL-L110B1_2.ENA_Sorted.fastq.gz u6047808@kingspeak.chpc.utah.edu:/uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/
+
+
+scp ~/Downloads/ERR13663679_1.fastq.gz u6047808@kingspeak.chpc.utah.edu:/uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/
+scp ~/Downloads/ERR13663679_2.fastq.gz u6047808@kingspeak.chpc.utah.edu:/uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/
+
+##Check which alignment method genome worked best
+
+
+##Contemp Lygdamus: ERR13663679
+
+##This is the corrected lygdamus/alexis/xerces genome compared to internet xerces
+## In (done)
+samtools flagstat file name
+lygaln_ERR13648381.bam: 94.23%
+lygaln_ERR13648382.bam: 94.33%
+lygaln_ERR13648386.bam: 96.26%
+lygaln_ERR13648391: 93.57%
+lygaln_ERR13648392: 93.55%
+lygaln_ERR13648396: 94.8%
+lygaln_ERR13648397: 95%
+lygaln_ERR13648398: 88%
+lygaln_ERR13648399: 95%
+lygaln_ERR13648400: 95%
+lygaln_ERR13663680: 94%
+lygaln_ERR13663682: 96/95%
+lygaln_ERR13663683: 96/95%
+lygaln_ERR13663684: 93%
+
+
+
+##Xerces compared to alexis (in Xerces/genome)
+ERR13648381.bam: 91%
+ERR13648382.bam: 91%
+ERR13648386.bam: 93%
+ERR13648391: 90%
+ERR13648392: 90%
+ERR13648396: 92%
+ERR13648397: 92%
+ERR13648398: 85%
+ERR13648399: 92%
+ERR13648400: 92.5%
+ERR13663680: 91%
+ERR13663682:94%
+ERR13663683:93%
+ERR13663684:90%
 
 
 
