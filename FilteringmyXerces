@@ -1,8 +1,23 @@
 Filtering for my xerces 
 
-filter using the same paramaters as soapnuke
-described in PDF with command line. read about first (second pdf)
-install soap? fastqc does filtering too
+##filter using the same paramaters as soapnuke, described in PDF with command line. read about first
+
+SOAPnuke software filter parameters: "-n 0.01 -l 20 -q 0.3 --adaMR 0.25 --ada_trim --polyX 50 -- minReadLen 100", steps of filtering:
+  1. Filter adapter: if the sequencing read matches 25.0% or more of the adapter sequence (maximum 2 base mismatches are allowed), cut the adapter;
+  2. Filter read length: if the length of the sequencing read is less than 100 bp, discard the entire read; -- do we want to do 100bp if it is ancient? fragment size was the mode 
+  3. Remove N: if the N content in the sequencing read accounts for 1.0% or more of the entire read, discard the entire read; change to 5%
+  4. Remove polyX: if the length of polyX (X can be A, T, G or C) in the sequencing read exceeds 50bp, discard the entire read;
+  5. Filter low-quality data: if the bases with a quality value of less than 20 in the sequencing read
+      account for 30.0% or more of the entire read, discard the entire read;
+  6. Obtain Clean reads: the output read quality value system is set to Phred+33
+
+Filtering on xer-1a-x
+"-n 0.05 -l 20 -q 0.3 --adaMR 0.25 --ada_trim --polyX 50 -- minReadLen 100"
+
+
+install soapnuke fastqc does filtering too
+
+
 
 look into any euphilooites whole genome sequone data fastq file to align to alexis
 
