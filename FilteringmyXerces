@@ -15,7 +15,173 @@ Filtering on xer-1a-x
 "-n 0.05 -l 20 -q 0.3 --adaMR 0.25 --ada_trim --polyX 50 -- minReadLen 100"
 
 
-install soapnuke fastqc does filtering too
+##install soapnuke fastqc does filtering too
+
+##want to parallelize and then use a batch script to submit. Use nukefork.pl to par. and soapnuke.sh to submit
+##for soapnuke.sh, feeding only the first half of the strand into the perl script, which then writes to the second. 
+
+##nukefork.pl
+
+#!/usr/bin/perl
+#
+#soapnuke alignment 
+#
+
+
+use Parallel::ForkManager;
+my $max = 15;
+my $pm = Parallel::ForkManager->new($max);
+
+FILES:
+foreach $fq1 (@ARGV){
+        $pm->start and next FILES; ## fork
+        $fq2 = $fq1;
+        $fq2 =~ s/_1\.fq/_2.fq/ or die "failed substitution for $fq1\n";
+        system "~/SOAPnuke/SOAPnuke filter -n 0.05 -l 20 -q 0.3 --ada_trim --polyX 50 --minReadLen 100 -1 $fq1 -2 $fq2 -C clean_$fq1 -D clean_$fq2 -o outDir\n";
+        $pm->finish;
+}
+
+$pm->wait_all_children;
+
+##Soapnuke.sh
+
+#!/bin/sh
+#SBATCH --time=240:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=20
+#SBATCH --account=usubio-kp
+#SBATCH --partition=usubio-kp
+#SBATCH --job-name=soapnuke
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=alia.donley@usu.edu
+
+
+ml gcc
+
+cd /uufs/chpc.utah.edu/common/home/gompert-group2/data/Xerces/ADXerces
+
+perl nukefork.pl x*1.fq 
+
+##wrote to ourDir (to find why or how these work just look into the soapnuke directions)
+
+
+
+##plot the base quality value distribution reads (1 and 2) in R to check if the DNA is clean or fucked
+
+setwd("/uufs/chpc.utah.edu/common/home/u6047808/Xerces/ADXerces/outDir")
+r1 <- read.table("Base_quality_value_distribution_by_read_position_1.txt", header = TRUE, sep = "\t", skip = 1)
+r2 <- read.table("Base_quality_value_distribution_by_read_position_2.txt", header = TRUE, sep = "\t", skip = 1)
+##Line plot of Mean and Median for r1 and r2  BY POSITION
+##r1
+plot(r1$Pos, r1$Mean, type = "l", col = "blue", lwd = 2,
+     ylim = c(0, 45), xlab = "Read Position", ylab = "Quality Score",
+     main = "Base Quality Scores per Position - Read 1")
+lines(r1$Pos, r1$Median, col = "darkgreen", lwd = 2)
+legend("bottomleft", legend = c("Mean", "Median"), col = c("blue", "darkgreen"), lwd = 2)
+
+##3' end is the right side. slight drip in quality here. polymerase becomes less efficient later in cycle. 
+##reduced signal intensity, base calling becomes more error prone. in the mean, not median. mean is sensitive to outliers
+## averages across all bases, a few very low scores will drag it down. 
+
+
+##r2
+plot(r2$Pos, r2$Mean, type = "l", col = "red", lwd = 2,
+     ylim = c(0, 45), xlab = "Read Position", ylab = "Quality Score",
+     main = "Base Quality Scores per Position - Read 2")
+lines(r2$Pos, r2$Median, col = "orange", lwd = 2)
+legend("bottomleft", legend = c("Mean", "Median"), col = c("red", "orange"), lwd = 2)
+
+##variability is throughout the entire mean. small subset of reads has low quality bases at the ends, bringing down the mean
+## normal for read 2
+
+
+##Base_quality_value_distribution_by_read_position_1.txt will tell us how much to trim and sequencing quality
+
+r1 <- read.table("Base_quality_value_distribution_by_read_position_1.txt",
+                 header = TRUE, sep = "\t", skip = 2, fill = TRUE)
+r1_raw <- read.table("Base_quality_value_distribution_by_read_position_1.txt",
+                     header = FALSE, sep = "\t", skip = 2, fill = TRUE, stringsAsFactors = FALSE)
+str(r1_raw)
+
+pos <- as.numeric(r1_raw$V1)     # Read position
+meanQ <- as.numeric(r1_raw$V44)  # Mean quality
+medQ <- as.numeric(r1_raw$V45)   # Median quality
+
+head(pos)
+head(meanQ)
+
+good_rows <- complete.cases(pos, meanQ, medQ)
+pos <- pos[good_rows]
+meanQ <- meanQ[good_rows]
+medQ <- medQ[good_rows]
+
+plot(pos, meanQ, type = "l", col = "blue", lwd = 2,
+     ylim = c(0, 45), xlab = "Read Position", ylab = "Quality Score",
+     main = "Read 1 Base Quality")
+lines(pos, medQ, col = "green", lwd = 2)
+legend("bottomleft", legend = c("Mean", "Median"), col = c("blue", "green"), lwd = 2)
+
+##didn't see the mean, so had to check using: 
+summary(meanQ)
+head(meanQ, 10)
+
+
+r2 <- read.table("Base_quality_value_distribution_by_read_position_2.txt",
+                 header = TRUE, sep = "\t", skip = 2, fill = TRUE)
+r2_raw <- read.table("Base_quality_value_distribution_by_read_position_2.txt",
+                     header = FALSE, sep = "\t", skip = 2, fill = TRUE, stringsAsFactors = FALSE)
+
+pos <- as.numeric(r2_raw$V1)     # Read position
+meanQ <- as.numeric(r2_raw$V44)  # Mean quality
+medQ <- as.numeric(r2_raw$V45)   # Median quality
+
+plot(pos, meanQ, type = "l", col = "blue", lwd = 2,
+     ylim = c(0, 45), xlab = "Read Position", ylab = "Quality Score",
+     main = "Read 1 Base Quality")
+lines(pos, medQ, col = "green", lwd = 2)
+legend("bottomleft", legend = c("Mean", "Median"), col = c("blue", "green"), lwd = 2)
+
+
+##same values as r1, 40
+
+##Basic_Statistics_of_Sequencing_Quality.txt
+
+##151bp for raw and clean reads, indicates no trucation
+
+##Total number of reads, only 4.58% of reads were filtered out. Settings were not overly aggressive
+##retained almost all bases during filtering
+##base comp- .04% N. 
+Raw: A 26%, C 21%, G 23%, T 30.8%
+Clean: A 30.8%, C 21%, G 24%, T 24%
+
+Quality scores: Q20:98.3 raw->98.5% clean R1
+                    99% raw -> 93.55% clean R2
+
+                Q30 95.7% raw -> 95.8% clean R1
+                    96.98% raw -> 93.55% clean R2
+quality scores above typical illumina benchmarks
+data retention, kept more than 95% of data
+
+Sources: 
+  https://www.base4.co.uk/understanding-interpreting-sequencing-quality-scores/?utm_source=chatgpt.com
+  https://zhuanlan.zhihu.com/p/43591935?utm_source=chatgpt.com
+  https://github.com/BGI-flexlab/SOAPnuke?utm_source=chatgpt.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
