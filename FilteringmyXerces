@@ -172,6 +172,59 @@ Sources:
 
 
 
+##Aligning
+
+##Fork Align (BWAMemFork.pl)
+
+BwaMemForkXer.pl
+
+#!/usr/bin/perl
+#
+#
+
+
+use Parallel::ForkManager;
+my $max = 20;
+my $pm = Parallel::ForkManager->new($max);
+my $genome = "/uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/filteredalignedLygdamus.fna";
+
+FILES:
+foreach $fq1 (@ARGV){
+        $pm->start and next FILES; ## fork
+        $fq2 = $fq1;
+        $fq2 =~ s/_1\.fq/_2.fq/ or die "failed substitution for $fq1\n";
+        $fq1 =~ m/([^\/]+)_S\d+_L\d+_1\.fq/;$/ or die "failed to match id $fq1\n";
+        $ind = $1;
+        system "bwa mem -t 1 -k 19 -r 1.5 -R \'\@RG\\tID:Xer-"."$ind\\tLB:Xer-"."$ind\\tSM:Xer-"."$ind"."\' $genome $fq1 $fq2 | samtools sort -@ 2 -O BAM -o algn_$ind".".bam - && samtools index -@ 2 $ind".".bam\n";
+
+        $pm->finish;
+}
+
+$pm->wait_all_children;
+
+
+
+##SubBWA   (submit bwa aligner)
+
+
+#!/bin/sh
+#SBATCH --time=240:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=25
+#SBATCH --account=usubio-kp
+#SBATCH --partition=usubio-kp
+#SBATCH --job-name=Xeralignment
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=alia.donley@usu.edu
+
+module load samtools
+module load bwa
+
+cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/ADXerces
+
+perl BwaMemForkXer.pl x*1.fq 
+
+
 
 
 
