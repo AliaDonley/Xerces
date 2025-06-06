@@ -227,6 +227,11 @@ perl BwaMemForkXer.pl x*1.fq
 
 
 
+###POST ALIGNMENT 
+
+##check it
+module load samtools
+samtools flagstat 
 
 
 
