@@ -289,3 +289,9 @@ ERR13663684:90%
 make symbolic link to xerces 
 make symbolic link to sequence data 
 
+Filter on over all depth, extract alleleic depth for allele counts
+no forloops for my stuff 
+need to zip up for GATK
+
+bcftools view algn_xer-3-p.snps.vcf | grep -v '^#' | head -n 1
+
