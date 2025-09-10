@@ -44,3 +44,20 @@ bcftools consensus -f GCA_905404095.1_ilGlaAlex1.1_genomic.fna - 'QUAL>10 & COUN
 
 
 
+
+
+
+
+
+##W/Brians help
+Created VariantCall2.sh with all variables eliminated and had full paths. Generated VCXerces2.vcf- USE THIS ONE
+
+Created VCFilt2.sh. Need to substitute variables for full paths. Want to run each command seperately? 
+
+java -jar /uufs/chpc.utah.edu/sys/installdir/r8/gatk/gatk-4.6.0.0/gatk-package-4.6.0.0-local.jar
+
+Fst or allele frequency difference once extract into R 
+
+depth files for each pool. export 5-10% of that file with all pools into R. or average over some window size (every 5k reads compute an average for that window across pools)- python or perl to read everything in. counter starts by 1 per line, each line will have a
+##runnong sum  of depth coverage across 5 samples 
+
