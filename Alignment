@@ -304,7 +304,7 @@ bcftools view algn_xer-3-p.snps.vcf | grep -v '^#' | head -n 1
 
 
 
-
+try bwa aln with minumum 5 
 
 
 
