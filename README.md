@@ -69,9 +69,61 @@ mv lygdamus_accessions_tmp.txt lygdamus_accessions.txt
 
 Lyg should have 22 and xerces should have 16
 
-Then trimmed with 04_trim_lyg and xer.sh which ran xerFork.pl and LygFork.pl
+Then trimmed with 04_trim_lyg.sh and 04_trim_xerces.sh (both are up above)
+04_trim_xerces.sh
+```sh
+#!/bin/sh
+#SBATCH --time=24:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=15
+#SBATCH --account=gompert-np
+#SBATCH --partition=gompert-np
+#SBATCH --job-name=trim_xerces
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=alia.donley@usu.edu
 
+source ~/miniforge3/bin/activate adna_trim
 
+cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/ADXerces/xerces
+perl xerFork.pl $(cat ../xerces_accessions.txt)
+```
+which ran
+
+xerFork.pl
+```pl
+#!/usr/bin/perl
+use Parallel::ForkManager;
+my $max = 15;
+my $pm = Parallel::ForkManager->new($max);
+
+FILES:
+foreach $ind (@ARGV){
+    $pm->start and next FILES;
+    my $fq1 = "raw/${ind}_1.fastq.gz";
+    my $fq2 = "raw/${ind}_2.fastq.gz";
+    system "adapterremoval --in-file1 $fq1 --in-file2 $fq2 --out-prefix trimmed/$ind --merge --min-length 25 --threads 1\n";
+    $pm->finish;
+}
+$pm->wait_all_children;
+```
+and
+lygFork.pl
+```pl
+#!/usr/bin/perl
+use Parallel::ForkManager;
+my $max = 15;
+my $pm = Parallel::ForkManager->new($max);
+
+FILES:
+foreach $ind (@ARGV){
+    $pm->start and next FILES;
+    my $fq1 = "raw/${ind}_1.fastq.gz";
+    my $fq2 = "raw/${ind}_2.fastq.gz";
+    system "fastp -i $fq1 -I $fq2 -o trimmed/${ind}_1.trim.fastq.gz -O trimmed/${ind}_2.trim.fastq.gz -j trimmed/${ind}.json -h trimmed/${ind}.html\n";
+    $pm->finish;
+}
+$pm->wait_all_children;
+```
 
 # Alignment 
 ## Aligning to G. alexis genome corrected with G. lygdamus. Trying to get just a complete lyg genome 
