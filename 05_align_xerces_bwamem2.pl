@@ -18,4 +18,4 @@
 ml samtools
 
 cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/ADXerces
-perl BwaMem2ForkLyg.pl xerces/soapnuke/clean/*/*_1.fq.gz
+perl BwaMem2ForkXer.pl xerces/soapnuke/clean/*/*_1.fq.gz
