@@ -125,7 +125,192 @@ foreach $ind (@ARGV){
 $pm->wait_all_children;
 ```
 
-# Alignment 
-## Aligning to G. alexis genome corrected with G. lygdamus. Trying to get just a complete lyg genome 
+
+
+Retried cleaning with Soapnuke like last time. Submitted Soapnuke.sh (has all lyg, xer, and my own):
+```
+#!/bin/sh
+#SBATCH --time=240:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=30
+#SBATCH --account=gompert-kp
+#SBATCH --partition=gompert-kp
+#SBATCH --job-name=soapnuke
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=alia.donley@usu.edu
+
+
+ml gcc
+cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/ADXerces
+perl nukeForkLyg.pl lygdamus/raw/*_1.fastq.gz
+#perl nukeForkXer.pl xerces/raw/*_1.fastq.gz
+#perl nukeForkOwn.pl /uufs/chpc.utah.edu/common/home/u6047808/Xerces/genome/[1-8]_S*_R1_001.fastq.gz
+
+```
+which ran nukeForkXer.pl:
+```sh
+#!/usr/bin/perl
+#
+#soapnuke alignment 
+#doing before alignment with bwamem2
+
+
+use Parallel::ForkManager;
+my $max = 15;
+my $pm = Parallel::ForkManager->new($max);
+my $outroot = "/uufs/chpc.utah.edu/common/home/u6047808/Xerces/ADXerces/xerces/soapnuke/clean";
+my $minlen = 30;
+
+FILES:
+foreach $fq1 (@ARGV){
+        $pm->start and next FILES; ## fork
+        ($fq2 = $fq1) =~ s/_1\.fastq\.gz$/_2.fastq.gz/ or die "failed substitution for $fq1\n";
+        $fq1 =~ m/^(.*\/)?(xerces)\/raw\/([^\/]+)_1\.fastq\.gz$/ or die "failed to match $fq1\n";
+        $id = $1;
+        $outdir = "$outroot/$id";
+        system "mkdir -p $outdir\n";
+        system "~/SOAPnuke/SOAPnuke filter -n 0.05 -l 20 -q 0.3 --ada_trim --polyX 50 --minReadLen $minlen -1 $fq1 -2 $fq2 -C ${id}_1.fq.gz -D ${id}_2.fq.gz -o $outdir\n";
+        $pm->finish;
+}
+$pm->wait_all_children;
+```
+Also have nukeForkLyg.pl and nukeForkOwn.pl
+
+## Alignment of my own samples will depend on which alignment worked better. I'm running bwamem2 and bwa aln. bwamem2 uses softclipping and I want to be sure the alignment rates are not vastly different. 
+
+# Alignment with bwa aln
+## Aligning lygdamus to alexis genome to make a corrected reference. Contains contemporary samples and ..2? museum samples
+Ran 05_align_lygdamus_bwaaln.sh
+```sh
+#!/bin/bash
+#SBATCH --time=240:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=30
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=80G
+#SBATCH --account=usubio-kp
+#SBATCH --partition=usubio-kp
+#SBATCH --job-name=align_lyg_bwaaln
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=alia.donley@usu.edu
+#SBATCH -o /uufs/chpc.utah.edu/common/home/u6047808/Xerces/ADXerces/logs/align_lyg_bwaaln%A_%a.out
+
+module load bwa
+module load samtools
+##Version: 1.16 (using htslib 1.16)
+
+cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/ADXerces
+mkdir -p lygdamus/bwaaln
+
+perl BwaAlnFork.pl lygdamus/soapnuke/clean/*/*_1.fq.gz
+```
+Which runs BwaAlnForkLyg.pl
+```
+#!/usr/bin/perl
+#
+# alignment with bwa aln + sampe (SOAPnuke-cleaned pairs)
+#
+
+use Parallel::ForkManager;
+my $max = 8;
+my $pm = Parallel::ForkManager->new($max);
+my $base = "/uufs/chpc.utah.edu/common/home/u6047808/Xerces/ADXerces";
+## fix me my $genome = "$base/ReferenceGenome/GCA_905404095.1_ilGlaAlex1.1_genomic.fna";
+my $tmp = "$base/lygdamus/aln_tmp";
+
+FILES:
+foreach $fq1 (@ARGV){
+        $pm->start and next FILES; ## fork
+        $fq2 = $fq1;
+        $fq2 =~ s/_1\.fq\.gz/_2.fq.gz/ or die "failed substitution for $fq1\n";
+        $fq1 =~ m/clean\/([A-Za-z0-9]+)/ or die "failed to match id $fq1\n";
+        $ind = $1;
+        $out = "$base/lygdamus/bam/$ind.alexis_bwaaln_soapnuke.sorted.bam";
+        system "bwa aln -t 2 $genome $fq1 > $tmp/$ind.1.sai && bwa aln -t 2 $genome $fq2 > $tmp/$ind.2.sai && bwa sampe -r \'\@RG\\tID:LygAln-"."$ind\\tLB:LygAln-"."$ind\\tSM:LygAln-"."$ind"."\' $genome $tmp/$ind.1.sai $tmp/$ind.2.sai $fq1 $fq2 | samtools sort -@ 2 -m 1G -O BAM -o $out - && samtools index -@ 2 $out && rm -f $tmp/$ind.1.sai $tmp/$ind.2.sai\n";
+
+        $pm->finish;
+}
+
+$pm->wait_all_children;
+```
+
+## Aligning xerces to alexis genome to make a corrected reference
+Ran 05_align_xerces_bwaaln.sh
+```#!/bin/bash
+#SBATCH --time=240:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=20
+#SBATCH --mem=80G
+#SBATCH --account=usubio-kp
+#SBATCH --partition=usubio-kp
+#SBATCH --exclude=kp293
+#SBATCH --job-name=align_xer_bwaaln
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=alia.donley@usu.edu
+#SBATCH -o /uufs/chpc.utah.edu/common/home/u6047808/Xerces/ADXerces/logs/align_xer_bwaaln_%j.out
+
+module load bwa
+module load samtools
+##Version: 1.16 (using htslib 1.16)
+
+cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/ADXerces
+mkdir -p xerces/bwaaln
+
+perl BwaAlnForkXer.pl xerces/soapnuke/clean/*/*_1.fq.gz
+```
+Which Ran BwaAlnForkXer.pl
+```
+#!/usr/bin/perl
+#
+# alignment with bwa aln + sampe (SOAPnuke-cleaned xerces pairs, aDNA settings)
+#Alignment of musuem xerces on ncbi
+
+use Parallel::ForkManager;
+my $max = 7;
+my $pm = Parallel::ForkManager->new($max);
+my $base = "/uufs/chpc.utah.edu/common/home/u6047808/Xerces/ADXerces";
+my $genome = "$base/ReferenceGenome/GCA_905404095.1_ilGlaAlex1.1_genomic.fna";
+my $tmp = "$base/xerces/aln_tmp";
+
+FILES:
+foreach $fq1 (@ARGV){
+        $pm->start and next FILES; ## fork
+        $fq2 = $fq1;
+        $fq2 =~ s/_1\.fq\.gz/_2.fq.gz/ or die "failed substitution for $fq1\n";
+        $fq1 =~ m/clean\/([A-Za-z0-9]+)/ or die "failed to match id $fq1\n";
+        $ind = $1;
+        $out = "$base/xerces/bam/$ind.alexis_bwaaln_soapnuke.sorted.bam";
+        system "bwa aln -l 1024 -n 0.01 -o 2 -t 2 $genome $fq1 > $tmp/$ind.1.sai && bwa aln -l 1024 -n 0.01 -o 2 -t 2 $genome $fq2 > $tmp/$ind.2.sai && bwa sampe -r \'\@RG\\tID:XerAln-"."$ind\\tLB:XerAln-"."$ind\\tSM:XerAln-"."$ind"."\' $genome $tmp/$ind.1.sai $tmp/$ind.2.sai $fq1 $fq2 | samtools sort -@ 2 -m 1G -O BAM -o $out - && samtools index -@ 2 $out && rm -f $tmp/$ind.1.sai $tmp/$ind.2.sai\n";
+
+        $pm->finish;
+}
+
+$pm->wait_all_children;
+```
+# Using bwa-mem2 
+## aligning lygdamus to alexis
+Ran 05_align_lygdamus_bwamem2.sh
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
