@@ -2,8 +2,6 @@
 #
 # alignment with bwa mem 
 #
-
-
 use Parallel::ForkManager;
 my $max = 6;
 my $pm = Parallel::ForkManager->new($max);
