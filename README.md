@@ -410,6 +410,7 @@ Submitted 06_VariantCall_BCF.sh
 
 
 
+ variant call the bams, to vcf, and then use bcfconsensus (takes original genome and those vcfs)
 
 
 
