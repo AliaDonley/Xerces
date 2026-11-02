@@ -289,8 +289,126 @@ $pm->wait_all_children;
 ```
 # Using bwa-mem2 
 ## aligning lygdamus to alexis
-Ran 05_align_lygdamus_bwamem2.sh
+Ran 05_align_lygdamus_bwamem2.sh L
 ```
+#!/bin/bash
+#SBATCH --time=240:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=16
+#SBATCH --mem=340G
+#SBATCH --account=gompert-np
+#SBATCH --partition=gompert-np
+#SBATCH --job-name=bwamem_lyg
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=alia.donley@usu.edu
+
+
+ml samtools
+
+cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/ADXerces
+perl BwaMemForkLyg.pl lygdamus/soapnuke/clean/*/*_1.fq.gz
+```
+Which ran BwaMemForkLyg.pl
+```
+#!/usr/bin/perl
+#
+#
+
+
+use Parallel::ForkManager;
+my $max = 7;
+my $pm = Parallel::ForkManager->new($max);
+my $base = "/uufs/chpc.utah.edu/common/home/u6047808/Xerces/ADXerces";
+my $genome = "/uufs/chpc.utah.edu/common/home/u6047808/Xerces/ADXerces/ReferenceGenome/alexis_bwamem2/GCA_905404095.1_ilGlaAlex1.1_genomic.fna";
+my $bwa2 = "/uufs/chpc.utah.edu/common/home/u6000989/source/bwa-mem2-2.0pre2_x64-linux/bwa-mem2";
+
+FILES:
+foreach $fq1 (@ARGV){
+        $pm->start and next FILES; ## fork
+        $fq2 = $fq1;
+        $fq2 =~ s/_1\.fq\.gz$/_2.fq.gz/ or die "failed substitution for $fq1\n";
+        $fq1 =~ m/clean\/([^\/]+)\/\1_1\.fq\.gz$/ or die "failed to match id $fq1\n";
+        $ind = $1;
+        $out = "$base/lygdamus/bwamem2/$ind.alexis_bwamem2_soapnuke.sorted.bam";
+        system "$bwa2 mem -t 2 -k 19 -r 1.5 -R \'\@RG\\tID:LygMem2-"."$ind\\tLB:LygMem2-"."$ind\\tSM:LygMem2-"."$ind"."\' $genome $fq1 $fq2 | samtools sort -@ 2 -m 1G -O BAM -o $out - && samtools index -@ 2 $out\n";
+        $pm->finish;
+}
+
+$pm->wait_all_children;
+```
+
+## Did the same for xerces. In all, ran bwamem2 for both lyg and xer, and bwa aln for lyg and xer, aligning both to alexis. 
+
+
+## Decided to use the xerces set aligned to alexis using bwamem2.
+
+# Need to duplicate first using dedup. Submit
+
+05.5_dedup_xer.sh
+```
+#!/bin/sh
+#SBATCH --time=72:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=14
+#SBATCH --mem=96G
+#SBATCH --account=gompert-np
+#SBATCH --partition=gompert-np
+#SBATCH --job-name=dedup_xer
+#SBATCH --mail-type=FAIL,END
+#SBATCH --mail-user=alia.donley@usu.edu
+
+
+module load samtools
+## version 1.16
+
+cd /uufs/chpc.utah.edu/common/home/u6047808/Xerces/ADXerces/xerces/bwamem2
+
+perl /uufs/chpc.utah.edu/common/home/u6047808/Xerces/ADXerces/dedup_xer.pl ERR*_ERR*.bam
+```
+Which ran
+dedup_xer.pl
+```
+
+#!/usr/bin/perl
+#
+# PCR duplicate removal with samtools
+# xerces (ENA) bwa-mem2 BAMs on G. alexis
+#
+# usage (from xerces/bwamem2): perl ../../DedupForkXer.pl ERR*_ERR*.bam
+#
+
+use Parallel::ForkManager;
+my $max = 14;
+my $pm = Parallel::ForkManager->new($max);
+
+my $tmp = "/scratch/general/nfs1/u6047808/dedup_xer";
+system "mkdir -p $tmp\n";
+
+FILES:
+foreach $bam (@ARGV){
+        $pm->start and next FILES; ## fork
+        $bam =~ m/^([A-Za-z0-9]+)/ or die "failed to match $bam\n";
+        $base = $1;
+        system "samtools collate -o co_$base.bam $bam $tmp/t$base\n";
+        system "samtools fixmate -m co_$base.bam fix_$base.bam\n";
+        system "samtools sort -T $tmp/s$base -o sort_$base.bam fix_$base.bam\n";
+        ## using default definition of dups
+        ## measure positions based on template start/end (default). = -m t
+        system "samtools markdup -T $tmp/m$base -r -f dedup_$base.stats.txt sort_$base.bam dedup_$base.bam\n";
+        system "samtools index dedup_$base.bam\n";
+        system "samtools flagstat dedup_$base.bam > dedup_$base.flagstat.txt\n";
+        ## remove intermediates once dedup BAM exists
+        system "[ -s dedup_$base.bam.bai ] && rm -f co_$base.bam fix_$base.bam sort_$base.bam\n";
+        $pm->finish;
+}
+
+$pm->wait_all_children;
+```
+## after filtering with dedup,  Variant calling using bcf tools
+Submitted 06_VariantCall_BCF.sh
+```
+
+
 
 
 
